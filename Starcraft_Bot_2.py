@@ -114,7 +114,7 @@ class BraxBot(sc2.BotAI):
 						await self.do(s.attack(random.choice(self.known_enemy_units)))
 	
 
-#Launch the game map/our bot/the other Bot/Real time ?
+#Launch the game map/our bot/the other Bot/Real time ? You can chose here who will play, 
 run_game(maps.get("Abyssal Reef LE"),[
 	#Mybot 
 	Bot(Race.Protoss, BraxBot()),
