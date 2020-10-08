@@ -9,6 +9,17 @@
 #Version : 3.7.8
 #Currently playing on AiArena
 #********************************************************/
+
+#Add faster robo
+#To do : Add immortals -> colosses
+#add observers to scout ALL the expend locations of the map
+#add thrid nexus
+#add sentries with guardian shield ?
+#Increae distance for blink distance
+#bring down limit of shield for retreate so stalkers come  back faster to fight
+#Micro adept and micro obs
+
+#Imports
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 import sc2
@@ -25,13 +36,13 @@ import random
 
 #Our bot
 class BraxBot(sc2.BotAI):
-
+	#Init class
 	def __init__(self):
 		sc2.BotAI.__init__(self)
 		self.proxy_built = False
-
+	#on step function
 	async def on_step(self, iteration):
-
+		#Async actions
 		await self.distribute_workers()
 		await self.build_probes()
 		await self.build_pylons()
@@ -52,7 +63,8 @@ class BraxBot(sc2.BotAI):
 
 	#Build more probes
 	async def build_probes(self):
-		#For every nexus that is created and that does not train a probe at the moment
+		#For every nexus that is ready and that does not train a probe at the moment train a probe
+		#If we have less than 22 probes / Nexus
 		for nexus in self.townhalls.ready:
 			if self.workers.amount < self.townhalls.amount * 22 and nexus.is_idle:
 				if self.can_afford(UnitTypeId.PROBE):
@@ -60,22 +72,24 @@ class BraxBot(sc2.BotAI):
 
 	#Build more pylons
 	async def build_pylons(self):
-		#If supply remaining is less than 5 and there is no pylon already being built, then we build a pylon near the nexus but 
+		#If supply remaining is less than 6 and there is no pylon already being built, then we build a pylon near the nexus but 
 		#We build it towards the center of the map so that the building are not getting in the way of our probes gathering minerals
 		if self.supply_left < 6 and self.already_pending(UnitTypeId.PYLON) == 0 and self.can_afford(UnitTypeId.PYLON) and self.supply_used  < 100:
 			for nexus in self.townhalls.ready:
 				#if we have enough minerals to build a pylon
 				if self.can_afford(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) == 0:
-					await self.build(UnitTypeId.PYLON, near=nexus.position.towards(self.game_info.map_center, 5))
+					await self.build(UnitTypeId.PYLON, near=nexus.position.towards(self.game_info.map_center, 7))
+		#If we have more than 50 supply we can create 2 pylons at once and we build them toward the center of the map
 		elif self.supply_used  > 50 and self.supply_left < 6: 
 			for nexus in self.townhalls.ready:
 				#if we have enough minerals to build a pylon
 				if self.can_afford(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) < 2:
-					await self.build(UnitTypeId.PYLON, near=nexus.position.towards(self.game_info.map_center, 40))
+					await self.build(UnitTypeId.PYLON, near=nexus.position.towards(self.game_info.map_center, 30))
 
 	#Build gas assimilators
 	async def build_assimilators(self):
-	#We need gas to build stalkers so we first need to build an assimilator. Our distribute workers method will then assign workers to the gas
+	#We need gas to build stalkers so we first need to build an assimilator. 
+	#Our distribute workers method will then assign workers to the gas
 		if self.supply_used  > 15:
 			for nexus in self.townhalls.ready:
 				vgs = self.vespene_geyser.closer_than(15, nexus)
@@ -89,49 +103,61 @@ class BraxBot(sc2.BotAI):
 						worker.build(UnitTypeId.ASSIMILATOR, vg)
 						worker.stop(queue=True)
 					
-	#We build an expansation
+	#We build an expansation when we can afford it and we build another one when we are above 50 supply and so on
 	async def expand(self):
 		if self.townhalls.ready.amount + self.already_pending(UnitTypeId.NEXUS) < 2:
 			if self.can_afford(UnitTypeId.NEXUS):
 				await self.expand_now()
+		elif self.townhalls.ready.amount + self.already_pending(UnitTypeId.NEXUS) < 3 and self.supply_used  > 50:
+			if self.can_afford(UnitTypeId.NEXUS):
+				await self.expand_now()
+		elif self.townhalls.ready.amount + self.already_pending(UnitTypeId.NEXUS) < 4 and self.supply_used  > 80:
+			if self.can_afford(UnitTypeId.NEXUS):
+				await self.expand_now()				
 
 	#Build production buildings
 	async def build_production_build(self):
 		if self.structures(UnitTypeId.PYLON).ready:
-					#proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
 					pylon = self.structures(UnitTypeId.PYLON).ready.random
+					#If we have a gate and no CC we build a CC
 					if self.already_pending(UnitTypeId.GATEWAY) == 1 and not self.structures(UnitTypeId.CYBERNETICSCORE) :
-						# If we have no cyber core, build one
+
 							if self.structures(UnitTypeId.GATEWAY).ready and self.can_afford(UnitTypeId.CYBERNETICSCORE)  and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
 								await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-					# Build up to 4 gates
 					else:
+						#We build 2 gates when we can afford it 
 						if (
 							self.can_afford(UnitTypeId.GATEWAY)
 							and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 3
 						):
 							await self.build(UnitTypeId.GATEWAY, near=pylon)
+						#We build a twilight councul when we have at least 2 gates and an expend
 						elif (
 							self.can_afford(UnitTypeId.TWILIGHTCOUNCIL)
 							and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount > 2 
 							and not self.structures(UnitTypeId.TWILIGHTCOUNCIL)
 							and self.already_pending(UnitTypeId.TWILIGHTCOUNCIL) == 0
+							and  self.structures(UnitTypeId.NEXUS).amount > 1
 						):
 							await self.build(UnitTypeId.TWILIGHTCOUNCIL, near=pylon)					
+						#We build a forge when we have at least 2 gates and an expend
 						elif (
 							self.can_afford(UnitTypeId.FORGE)
 							and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount > 2 
 							and not self.structures(UnitTypeId.FORGE)
 							and  self.structures(UnitTypeId.CYBERNETICSCORE).ready.amount == 1
 							and self.already_pending(UnitTypeId.FORGE) == 0
+							and  self.structures(UnitTypeId.NEXUS).amount > 1
 						):
 							await self.build(UnitTypeId.FORGE, near=pylon)	
+						#We build to 7 gates when we have an expend
 						elif (
 							self.can_afford(UnitTypeId.GATEWAY)
 							and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 7
 							and self.structures(UnitTypeId.NEXUS).amount > 1
 						):
 							await self.build(UnitTypeId.GATEWAY, near=pylon)
+						#We build a robotics facility when we have an expend
 						elif (
 							self.can_afford(UnitTypeId.ROBOTICSFACILITY)
 							and self.structures(UnitTypeId.ROBOTICSFACILITY).amount  < 1
@@ -140,52 +166,47 @@ class BraxBot(sc2.BotAI):
 							await self.build(UnitTypeId.ROBOTICSFACILITY, near=pylon)						
 
 
-	#Build Units - Stalkers
+	#Build Units - Adepts
 	async def build_units(self):
 		#for each gw that is not producing units
 		for gw in self.structures(UnitTypeId.GATEWAY).ready:
-			#if we can afford it and if we have enough supply left
-			#ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-			#if ccore is not empty: 
-			if self.can_afford(UnitTypeId.ZEALOT) and not self.structures(UnitTypeId.CYBERNETICSCORE).ready and gw.is_idle and self.units(UnitTypeId.ZEALOT).amount < 2:
-				gw.train(UnitTypeId.ZEALOT)
+			#if we can afford it and if we have enough supply left and the CC is not yet done, we produce two adepts
+			if self.can_afford(UnitTypeId.ADEPT) and not self.structures(UnitTypeId.CYBERNETICSCORE).ready and gw.is_idle and self.units(UnitTypeId.ADEPT).amount < 2:
+				gw.train(UnitTypeId.ADEPT)
 
-	#Build Units - Stalkers
+	#Build Units - Observers
 	async def build_obs(self):
-		#for each gw that is not producing units
+		#for each robotics facility that is not producing units
 		for rf in self.structures(UnitTypeId.ROBOTICSFACILITY).ready:
-			#if we can afford it and if we have enough supply left
-			#ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-			#if ccore is not empty: 
+			#if we can afford it and if we have enough supply left we produce 2 observers
 			if self.can_afford(UnitTypeId.OBSERVER ) and self.units(UnitTypeId.OBSERVER).amount < 2 and rf.is_idle:
 				#we produce a stalker
 				rf.train(UnitTypeId.OBSERVER)
 
+	#Method to warp units
 	async def warp_new_units(self):
 		for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
+			#We take the abilities of the warpgate to retrieves the warping stalker ability
 			abilities = await self.get_available_abilities(warpgate)
-			# all the units have the same cooldown anyway so let's just look at ZEALOT
+			#if it is not on cooldown
 			if AbilityId.WARPGATETRAIN_STALKER in abilities:
-				#pos = proxy.position.to2.random_on_distance(4)
-				'''
-				pos = pylon = self.structures(UnitTypeId.PYLON).ready.random.position.random_on_distance(4)
-				placement = await self.find_placement(AbilityId.WARPGATETRAIN_STALKER, pos, placement_step=1)
-				if placement is None:
-					# return ActionResult.CantFindPlacementLocation
-					print("can't place")
-					return
-				warpgate.warp_in(UnitTypeId.STALKER, placement)
-				'''
+				#we sort the pylons by their distance to our warp gate
 				self.ordered_pylons = sorted(self.structures(UnitTypeId.PYLON).ready, key=lambda pylon: pylon.distance_to(warpgate))
+				#we pick the pylon the further away from the warp gate, because why not
 				pos = self.ordered_pylons[-1].position.random_on_distance(4)
+				#we select the placement of the stalker we want to warp as the position of the pylon selected 
 				placement = await self.find_placement(AbilityId.WARPGATETRAIN_STALKER, pos, placement_step=1)
+				#if no placement  available we return error
 				if placement is None:
-					# return ActionResult.CantFindPlacementLocation
 					print("can't place")
 					return
+				#else we warp our stalker ! 
 				warpgate.warp_in(UnitTypeId.STALKER, placement)
 
+	#Method for Chrono boost
 	async def chrono_boost(self):
+
+		#We get the list of our buildings that we want to chronoboost
 		if self.structures(UnitTypeId.CYBERNETICSCORE).ready:
 			ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
 		if self.structures(UnitTypeId.FORGE).ready:	
@@ -193,28 +214,32 @@ class BraxBot(sc2.BotAI):
 		if self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready:
 			twilight = self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready.first
 
-
+		#CC is on the top of our priority list if researches the upgrade for warp gate
 		if self.structures(UnitTypeId.CYBERNETICSCORE).ready and not ccore.is_idle and not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
 			for nexus in self.townhalls.ready:
 				if nexus.energy >= 50:
 					nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
 
+		#then blink in the twilight council
 		elif self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and not twilight.is_idle and not twilight.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
 			for nexus in self.townhalls.ready:
 				if nexus.energy >= 50:
 					nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, twilight)
 
+		#then the forge for the upgrades
 		elif self.structures(UnitTypeId.FORGE).ready and not forge.is_idle and not forge.has_buff(BuffId.CHRONOBOOSTENERGYCOST):
 			for nexus in self.townhalls.ready:
 				if nexus.energy >= 50:
 					nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, forge)		
 
-		elif self.workers.amount < 44:
+		#finally the nexus if we are under 70 probes
+		elif self.workers.amount < 70:
 			for nexus in self.townhalls.ready:
 				if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle and  self.already_pending(UnitTypeId.CYBERNETICSCORE) < 1 and self.workers.amount < 44:
 					if nexus.energy >= 60:
 						nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
 
+		#and then the warpgates
 		else:
 			for nexus in self.townhalls.ready:
 				if nexus.energy >= 50:
@@ -223,30 +248,35 @@ class BraxBot(sc2.BotAI):
 							if nexus.energy >= 50:
 								nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
 
+	#method to research warpgate, if CC ready, and can afford and not yet researched
 	async def warpgate_research(self):
 		if (
 			self.structures(UnitTypeId.CYBERNETICSCORE).ready
 			and self.can_afford(AbilityId.RESEARCH_WARPGATE)
 			and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0
 		):
+		#We research warp gate ! 
 			ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
 			ccore.research(UpgradeId.WARPGATERESEARCH)
 
+	#method to research blink, if TC is ready, if we can affort blink and not yet researched
 	async def twilight_research(self):
 		if (
 			self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready
 			and self.can_afford(AbilityId.RESEARCH_BLINK)
 			and self.already_pending_upgrade(UpgradeId.BLINKTECH) == 0
 		):
+		#We research blink ! 
 			twilight = self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready.first
 			twilight.research(UpgradeId.BLINKTECH)
 
+	#method to research the upgrades at the forge
 	async def forge_research(self):
 		if  self.structures(UnitTypeId.FORGE).ready:
 
+			#we get our forge and if we can afford and not already upgrading we cycle through the upgrades until lvl 2
 			forge = self.structures(UnitTypeId.FORGE).ready.first
 			if (
-				#self.structures(UnitTypeId.FORGE).ready
 				 self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDWEAPONSLEVEL1)
 				 and self.already_pending_upgrade(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1) == 0
 				 and forge.is_idle
@@ -273,8 +303,6 @@ class BraxBot(sc2.BotAI):
 
 	#Stalker behavior
 	async def fight(self):
-		# Make stalkers attack either closest enemy unit or enemy spawn location
-
 		enemies = self.enemy_units.filter(lambda unit: unit.type_id not in {UnitTypeId.LARVA, UnitTypeId.EGG})
 		enemy_fighters = enemies.filter(lambda u: u.can_attack) + self.enemy_structures(
 			{UnitTypeId.BUNKER, UnitTypeId.SPINECRAWLER, UnitTypeId.PHOTONCANNON}
@@ -366,52 +394,46 @@ class BraxBot(sc2.BotAI):
 						self.do(stalker.move(enemy_fighters.closest_to(stalker)))
 				# no dangerous enemy at all, attack closest anything
 		else:
-			for zealot in self.units(UnitTypeId.ZEALOT).ready.idle:
+			#our defense mechanic with our adepts
+			for adept in self.units(UnitTypeId.ADEPT).ready.idle:
 				if enemy_fighters:
-					self.do(zealot.attack(random.choice(enemy_fighters)))
-									
+					self.do(adept.attack(random.choice(enemy_fighters)))
+	
+	#Method to morph our gateways into warpgates, if gateway is ready and idle, and we have done the upgrade then morph						
 	async def morph_warpgate(self):
-				# Morph to warp gate when research is complete
 		for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
 			if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
 				gateway(AbilityId.MORPH_WARPGATE)
 
+	#Method to send our obs scouting 
 	async def send_obs(self):
-				# Morph to warp gate when research is complete		
+		#We retrieve the list of possible extensions
 		self.ordered_expansions = None
 		self.ordered_expansions = sorted(
             self.expansion_locations.keys(), key=lambda expansion: expansion.distance_to(self.enemy_start_locations[0])
         )
-				
+		#We send the obs in each, initially I limited at 4 but then in some games I could not find a hidden expo..			
 		for obs in self.units(UnitTypeId.OBSERVER).ready:
 			if obs.is_idle:
+				self.do(obs.move(random.choice(self.ordered_expansions[0:])))
 
-				self.do(obs.move(random.choice(self.ordered_expansions[0:4])))
-
+	#Our method to micro and to blink 
 	async def micro(self):
-
 		home_location = self.start_location
 		enemies: Units = self.enemy_units | self.enemy_structures
 		enemies2 = self.enemy_units.filter(lambda unit: unit.type_id not in {UnitTypeId.DRONE,UnitTypeId.SCV})
 		enemies_can_attack: Units = enemies2.filter(lambda unit: unit.can_attack_ground)
 		for stalker in self.units(UnitTypeId.STALKER).ready:
-
-			escape_location = stalker.position.towards(home_location, 4)
+			escape_location = stalker.position.towards(home_location, 6)
 			enemyThreatsClose: Units = enemies_can_attack.filter(lambda unit: unit.distance_to(stalker) < 15)  # Threats that can attack the stalker
-
-			if stalker.shield < 20 and enemyThreatsClose:
-
+			if stalker.shield < 4 and enemyThreatsClose:
 				abilities = await self.get_available_abilities(stalker)
-
 				if AbilityId.EFFECT_BLINK_STALKER in abilities:
 					#await self.order(stalker, EFFECT_BLINK_STALKER, escape_location)
 					stalker(AbilityId.EFFECT_BLINK_STALKER, escape_location)
 					continue
 				else: 
-					#if not self.has_order(MOVE, stalker):
-					#stalker.move(escape_location)
-					#continue
-					retreatPoints: Set[Point2] = self.neighbors8(stalker.position, distance=2) | self.neighbors8(stalker.position, distance=4)
+					retreatPoints: Set[Point2] = self.around8(stalker.position, distance=2) | self.around8(stalker.position, distance=4)
 					# Filter points that are pathable
 					retreatPoints: Set[Point2] = {x for x in retreatPoints if self.in_pathing_grid(x)}
 					if retreatPoints:
@@ -420,11 +442,11 @@ class BraxBot(sc2.BotAI):
 						stalker.move(retreatPoint)
 						continue  # Continue for loop, dont execute any of the following
 
-		# Stolen and modified from position.py
-	def neighbors8(self, position, distance=1) -> Set[Point2]:
+	# Stolen and modified from position.py
+	def around8(self, position, distance=1) -> Set[Point2]:
 		p = position
 		d = distance
-		return self.neighbors4(position, distance) | {
+		return self.around4(position, distance) | {
 			Point2((p.x - d, p.y - d)),
 			Point2((p.x - d, p.y + d)),
 			Point2((p.x + d, p.y - d)),
@@ -433,7 +455,7 @@ class BraxBot(sc2.BotAI):
 
 
 	# Stolen and modified from position.py
-	def neighbors4(self, position, distance=1) -> Set[Point2]:
+	def around4(self, position, distance=1) -> Set[Point2]:
 		p = position
 		d = distance
 		return {Point2((p.x - d, p.y)), Point2((p.x + d, p.y)), Point2((p.x, p.y - d)), Point2((p.x, p.y + d))}
@@ -442,7 +464,7 @@ def main():
 	sc2.run_game(
 		sc2.maps.get("Abyssal Reef LE"),
 		[Bot(Race.Protoss, BraxBot()), Computer(Race.Zerg, Difficulty.VeryHard)],
-		realtime=False,
+		realtime=True,
 		save_replay_as="Example.SC2Replay",
 	)
 
