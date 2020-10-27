@@ -7,12 +7,11 @@ All first 5 versions are rules based. In the fifth version I introduced data cap
 
 I am also considering switching to sharpysc2 which seems quite easier to implement. 
 
+For a detailed tutorial on how to use the code above : 
 
+https://brax.gg/python-sc2-rule-based-bot/
+https://brax.gg/python-sc2-advanced-bot/
+https://brax.gg/python-sc2-3-final-rule-based-bot-and-data-collection/
 
-Here is a video VS another human made bot : 
+Good luck and En Taro Adun ! 
 
-<iframe width="750" height="422" src="https://www.youtube.com/embed/Huj0eblR3bI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-And here is a video with datacapture vs an AI : 
-
-<iframe width="750" height="422" src="https://www.youtube.com/embed/Vt_O6RVeKe0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
