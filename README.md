@@ -17,5 +17,8 @@ https://brax.gg/python-sc2-3-final-rule-based-bot-and-data-collection/
 
 Good luck and En Taro Adun !
 
+![Capture3](https://user-images.githubusercontent.com/55979445/97324301-fa05fe80-1871-11eb-9aa7-c99d11a7f4ed.JPG)
+![Capture4](https://user-images.githubusercontent.com/55979445/97324305-fbcfc200-1871-11eb-99b5-fb5abbed208b.JPG)
+
 
 
