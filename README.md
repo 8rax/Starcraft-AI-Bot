@@ -10,8 +10,12 @@ I am also considering switching to sharpysc2 which seems quite easier to impleme
 For a detailed tutorial on how to use the code above : 
 
 https://brax.gg/python-sc2-rule-based-bot/
+
 https://brax.gg/python-sc2-advanced-bot/
+
 https://brax.gg/python-sc2-3-final-rule-based-bot-and-data-collection/
 
-Good luck and En Taro Adun ! 
+Good luck and En Taro Adun !
+
+
 
